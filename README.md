@@ -1,0 +1,254 @@
+# 🌿 Ecozed — Open-Source E-Commerce Management Platform
+
+**Ecozed** is a free, open-source, multi-store e-commerce management system designed to help Algerian and Arab dropshippers, small businesses, and e-commerce entrepreneurs manage their entire operation from a single dashboard.
+
+Track orders across multiple stores, manage inventory, handle shipping with **Ecotrack** integration, calculate staff salaries, print shipping labels and bordereaux, sync delivery tracking, and much more — **all for free, forever**.
+
+> 📱 **Mobile app (Flutter) — Coming Soon**
+
+---
+
+## ✨ Why Ecozed?
+
+| Feature | Benefit |
+|---------|---------|
+| 🆓 **100% Free & Open Source** | No subscriptions, no hidden fees. MIT licensed. |
+| 🏪 **Multi-Store Support** | Manage all your stores from one dashboard |
+| 📦 **Ecotrack Shipping Integration** | Send orders, print labels, sync tracking automatically |
+| 👥 **Staff Management** | Track performance, calculate salaries & bonuses |
+| 📊 **Real-Time Dashboard** | See sales, profits, and order stats at a glance |
+| 🌐 **Arabic & English UI** | Full bilingual support (RTL ready) |
+| 🔌 **WooCommerce Integration** | Auto-import orders from WooCommerce stores |
+| 📄 **PDF Labels & Bordereaux** | Generate shipping documents with one click |
+
+---
+
+## 📺 Video Tutorials
+
+Follow along with the complete video playlist covering every feature:
+
+[![Ecozed YouTube Playlist](https://img.shields.io/badge/YouTube-Playlist-red)](https://www.youtube.com/playlist?list=PL-ZVUkT94N4bFoD5hOSHhmSoBoM9ZDuiQ)
+
+[**Watch the Full Playlist →**](https://www.youtube.com/playlist?list=PL-ZVUkT94N4bFoD5hOSHhmSoBoM9ZDuiQ)
+
+---
+
+## 📞 Contact & Suggestions
+
+Have an idea or feature request? I'd love to hear from you!
+
+**WhatsApp:** [+213 796 33 25 34](https://wa.me/213796332534)
+
+---
+
+## 🧰 Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Framework** | [Next.js 16](https://nextjs.org/) (App Router) |
+| **UI Library** | [React 19](https://react.dev/) |
+| **Styling** | [Tailwind CSS 4](https://tailwindcss.com/) |
+| **Database** | PostgreSQL ([Neon DB](https://neon.tech/) recommended) |
+| **ORM** | [Prisma](https://www.prisma.io/) |
+| **Auth** | JWT (bcrypt + jsonwebtoken) |
+| **Validation** | [Zod](https://zod.dev/) |
+| **State** | [Zustand](https://zustand-demo.pmnd.rs/) |
+| **Icons** | [Lucide React](https://lucide.dev/) |
+| **PDF** | [pdf-lib](https://pdf-lib.org/) |
+| **Container** | Docker (optional) |
+
+---
+
+## 📋 Implemented Features
+
+| Module | Features |
+|--------|----------|
+| **Dashboard** | Real-time stats, sales analytics, order overview, multi-store performance |
+| **Orders** | Create/edit/delete, status tracking, bulk operations, filters, search |
+| **Products** | CRUD, weight/cost/profit tracking, quantity-based offers, bulk update/delete |
+| **Stores** | Multi-store management, per-store products and orders |
+| **Users (Staff)** | Role-based access (Admin/Worker), permissions system, store assignment |
+| **Salary** | Base salary, confirmation bonus, upsell bonus, payout history, performance tracking |
+| **Shipping (Ecotrack)** | Send orders, validate/dispatch, print labels, bordereaux PDF, sync tracking, stop desk support |
+| **Integrations** | WooCommerce auto-import, webhook endpoints, API key management |
+| **Settings** | Shipping providers, shipping cost per wilaya, data backup/restore, stop desk commune sync |
+| **Localization** | Full Arabic and English UI, RTL support |
+
+---
+
+## 🔌 How to Integrate a WooCommerce Store
+
+1. Go to **Settings → Integrations** in the dashboard
+2. Click **Add Integration**, select the store, and optionally generate a new API key or enter your own
+3. Copy the **Webhook URL** shown after creation (e.g. `https://your-domain.com/api/webhooks/woocommerce/<uuid>`)
+4. In your WooCommerce admin panel, go to **WooCommerce → Settings → Advanced → Webhooks**
+5. Click **Add Webhook**:
+   - **Name**: `Ecozed Sync`
+   - **Status**: `Active`
+   - **Topic**: `Order updated` (or any event you want to listen to)
+   - **Delivery URL**: Paste the Webhook URL from step 3, and **append `?key=YOUR_API_KEY`** to the end
+   - **Secret**: Leave empty (authentication is handled via the API key in the URL)
+6. Click **Save Webhook**
+
+> Orders with status `processing` will be automatically imported into Ecozed.
+
+---
+
+## 🚚 How to Integrate Ecotrack Shipping
+
+1. Go to **Settings → Shipping Provider** in the dashboard
+2. Click **Add Provider** and fill in:
+   - **Company**: `ecotrack`
+   - **Store**: Select the store (or leave empty for global/all stores)
+   - **Prefix**: Your Ecotrack client prefix (e.g. `world-express`)
+   - **API Key**: Your Ecotrack API token (Bearer token)
+   - **Base URL**: Leave empty to auto-generate (`https://<prefix>.ecotrack.dz`)
+3. Click **Save** — the provider will appear in the shipping section
+4. Then go to **Settings → Shipping** and seed default wilaya costs via the **Load Template** button
+5. Go to **Settings → Stop Desk** inside the provider card and click **Sync** to load stop-desk communes
+
+Once set up, you can:
+- Send orders to Ecotrack from the Orders page
+- Validate/dispatch orders
+- Print shipping labels and bordereaux (PDF)
+- Sync delivery tracking status
+
+> Toggle the provider on/off with the power button — no need to delete it when temporarily unused.
+
+---
+
+## ⚠️ Important: Backup Before Updating
+
+Before updating your Ecozed instance to a newer version, **always export a backup** of your database first.
+
+Ecozed has a **built-in backup system** located in **Settings → Data Backup & Restore**. Export a backup file before upgrading — if anything goes wrong or data is lost, you can simply re-import it.
+
+---
+
+## 🚀 Deployment Options
+
+### Option 1: 100% Free — Deploy on Vercel (Recommended)
+
+[Vercel](https://vercel.com/) offers a generous free tier perfect for this project.
+
+### Option 2: Your Own Server (with Docker)
+
+Use the included `Dockerfile` for a containerized deployment on any VPS or dedicated server.
+
+### Option 3: Google Cloud Run
+
+Deploy as a serverless container on Google Cloud Run for auto-scaling and pay-per-use pricing.
+
+---
+
+## ⚡ Quick Start Guide
+
+### Step 1: Create a Database
+
+Create a free PostgreSQL database on **[Neon DB](https://neon.tech/)** (their free tier is excellent):
+
+1. Sign up at [neon.tech](https://neon.tech/)
+2. Create a new project (Neon auto-creates a default database named `neondb`)
+3. **Create a new database** named `zaidi_ecom_dev`:
+   - Go to the **Databases** tab in your Neon project dashboard
+   - Click **Add Database** → name it `zaidi_ecom_dev`
+4. Copy your connection string (looks like `postgresql://user:password@ep-xxx.region.aws.neon.tech/zaidi_ecom_dev`)
+
+> ⚠️ **Don't use the default `neondb` database** — create a dedicated `zaidi_ecom_dev` database for this project to avoid conflicts.
+
+### Step 2: Fork the Repository
+
+Fork this repo on GitHub to your account.
+
+### Step 3: Deploy on Vercel
+
+1. Go to [vercel.com](https://vercel.com/) and sign in with GitHub
+2. Click **Add New → Project**
+3. Select your forked repository
+4. In **Environment Variables**, add:
+
+| Variable | Value |
+|----------|-------|
+| `DATABASE_URL` | Your Neon DB connection string |
+| `JWT_SECRET` | Any secure random string (e.g. generated via `openssl rand -base64 32`) |
+| `NODE_ENV` | `production` |
+
+5. Click **Deploy**
+
+### Step 4: Create Admin Account (Automatic)
+
+Once deployed, navigate to your Vercel URL. The first visit will automatically redirect to a **Setup Wizard** where you create the admin account. No scripts or CLI commands needed — just fill in the form.
+
+After creating the admin account, you'll be redirected to the login page. Log in and start managing your business!
+
+> **Note:** The setup page only appears when no admin account exists. After the first admin is created, it is no longer accessible.
+
+---
+
+### Docker Deployment (Alternative)
+
+```bash
+docker build -t ecozed .
+docker run -p 3000:3000 \
+  -e DATABASE_URL="your-neon-connection-string" \
+  -e JWT_SECRET="your-secret-key" \
+  -e NODE_ENV="production" \
+  ecozed
+```
+
+### Google Cloud Run (Alternative)
+
+```bash
+# Build and push to Google Container Registry
+docker build -t gcr.io/your-project/ecozed .
+docker push gcr.io/your-project/ecozed
+
+# Deploy to Cloud Run
+gcloud run deploy ecozed \
+  --image gcr.io/your-project/ecozed \
+  --set-env-vars "DATABASE_URL=...,JWT_SECRET=...,NODE_ENV=production" \
+  --platform managed
+```
+
+---
+
+## 🗺️ Roadmap
+
+- [x] Multi-store management
+- [x] Order CRUD & status tracking
+- [x] Product management with offers
+- [x] Staff management with permissions
+- [x] Salary & bonus calculations
+- [x] Ecotrack shipping integration (send, validate, labels, tracking sync)
+- [x] WooCommerce integration
+- [x] Bilingual UI (Arabic / English)
+- [x] Data backup & restore
+- [ ] **📱 Mobile App (Flutter)** — Coming Soon
+- [ ] Shopify integration
+- [ ] Advanced analytics & reports
+- [ ] Automated import from Facebook/Instagram shops
+- [ ] Telegram notifications
+- [ ] API tokens for third-party integrations
+- [ ] Dark mode
+
+---
+
+## 🔗 Links
+
+| Resource | Link |
+|----------|------|
+| 📺 YouTube Playlist | [Watch Now](https://www.youtube.com/playlist?list=PL-ZVUkT94N4bFoD5hOSHhmSoBoM9ZDuiQ) |
+| 💾 Neon DB (Database) | [https://neon.tech/](https://neon.tech/) |
+| 🚀 Vercel (Hosting) | [https://vercel.com/](https://vercel.com/) |
+| 💬 WhatsApp Support | [+213 796 33 25 34](https://wa.me/213796332534) |
+| 🐙 GitHub | [Fork this project](https://github.com/) |
+
+---
+
+## 📄 License
+
+This project is **open source** and will remain **free forever**. MIT License.
+
+---
+
+<p align="center">Made with ❤️ for the Algerian and Arab e-commerce community</p>

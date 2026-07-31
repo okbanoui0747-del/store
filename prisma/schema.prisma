@@ -1,0 +1,193 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  WORKER
+}
+
+enum ProductStatus {
+  DRAFT
+  TESTING
+  FACE
+  PRODUCTION
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  CANCELED
+  DELIVERED
+  RETURNED
+  NO_ANSWER
+  BUSY
+  PHONE_CLOSED
+}
+
+enum ShippingType {
+  HOME
+  STOP_DESK
+}
+
+model Store {
+  id          String    @id @default(cuid())
+  name        String
+  description String?   @db.Text
+  websiteUrl  String?
+  products    Product[]
+  orders      Order[]
+  users       User[]         @relation("UserStores")
+  integrations     Integration[]
+  ecotrackConfigs  EcotrackConfig[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model User {
+  id          String   @id @default(cuid())
+  username    String   @unique
+  password    String
+  role        Role     @default(WORKER)
+  permissions String[] // Array of permission strings
+  stores            Store[]  @relation("UserStores")
+  baseSalary        Float    @default(0)
+  confirmationPrice Float    @default(0)
+  upsellBonus       Float    @default(0)
+  confirmedOrders   Order[]  @relation("ConfirmedBy")
+  payouts           Payout[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Product {
+  id           String        @id @default(cuid())
+  name         String
+  weight       Float?
+  cost         Float
+  sellingPrice Float
+  adsCost      Float         @default(0)
+  extraCharges Float         @default(0)
+  imageUrl       String?       
+  description    String?       @db.Text
+  landingPageUrl String?
+  status         ProductStatus @default(DRAFT)
+  assets       Json?         // { images: [], videos: [], landingPage: "", articles: [] }
+  offers       Json?         // [{ qty: 2, price: 2500 }, { qty: 3, price: 3500 }]
+  orders       Order[]
+  store        Store         @relation(fields: [storeId], references: [id])
+  storeId      String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Order {
+  id           String       @id @default(cuid())
+  status       OrderStatus  @default(PENDING)
+  shippingType ShippingType @default(HOME)
+  shippingCost Float        @default(0)
+  clientName   String
+  clientPhone1 String
+  clientPhone2 String?
+  state        String
+  city         String
+  address      String?
+  quantity       Int         @default(1)
+  hasUpsell      Boolean     @default(false)
+  upsellQuantity Int?
+  totalPrice     Float?      // Custom price for this specific order
+  adsCost        Float       @default(0)
+  notes          String?
+  product        Product     @relation(fields: [productId], references: [id])
+  productId      String
+  store          Store       @relation(fields: [storeId], references: [id])
+  storeId        String
+  confirmedBy      User?       @relation("ConfirmedBy", fields: [confirmedById], references: [id])
+  confirmedById    String?
+  ecotrackRef        String?     // Tracking reference from Ecotrack
+  sentToEcotrack     Boolean     @default(false)
+  sentToEcotrackAt   DateTime?
+  ecotrackValidated  Boolean     @default(false)
+  ecotrackValidatedAt DateTime?
+  isPaidOut        Boolean     @default(false)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+}
+
+model ShippingConfig {
+  id           String   @id @default(cuid())
+  stateName    String   @unique
+  stateCode    String   @unique
+  homeCost     Float    @default(0)
+  stopDeskCost Float    @default(0)
+  returnCost   Float    @default(0)
+  changeCost   Float    @default(0)
+  updatedAt    DateTime @updatedAt
+}
+
+
+model Blacklist {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  reason    String?
+  createdAt DateTime @default(now())
+}
+
+model Payout {
+  id          String   @id @default(cuid())
+  workerId    String
+  worker      User     @relation(fields: [workerId], references: [id])
+  amount      Float
+  ordersCount Int
+  upsellCount Int
+  createdAt   DateTime @default(now())
+}
+
+model Integration {
+  id           String   @id @default(cuid())
+  storeId      String
+  store        Store    @relation(fields: [storeId], references: [id])
+  websiteType  String   // e.g. "woocommerce"
+  apiKey       String
+  endpointUuid String   @unique
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model EcotrackConfig {
+  id        String   @id @default(cuid())
+  storeId   String?  // null = global (works for all stores)
+  store     Store?   @relation(fields: [storeId], references: [id])
+  company   String   @default("ecotrack")
+  prefix    String
+  apiKey    String
+  baseUrl   String
+  isActive  Boolean  @default(true)
+  lastStopDeskSync DateTime?
+  stopDeskCommunes  StopDeskCommune[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model StopDeskCommune {
+  id         String   @id @default(cuid())
+  nom        String
+  wilayaId   Int
+  codePostal String?
+  hasStopDesk Boolean @default(false)
+  configId   String
+  config     EcotrackConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([configId, wilayaId, nom])
+}

@@ -1,0 +1,534 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Button, Input, Modal, showToast } from "@/components/ui";
+import { useLanguage, useT } from "@/lib/translations";
+import { 
+  UserPlus, 
+  Trash2, 
+  Key, 
+  ShieldCheck, 
+  RefreshCw, 
+  LayoutGrid, 
+  List as ListIcon,
+  AlertCircle,
+  Shield,
+  User as UserIcon,
+  Lock,
+  MoreVertical,
+  CheckCircle2,
+  Store,
+  Globe
+} from "lucide-react";
+
+interface StoreInfo {
+  id: string;
+  name: string;
+}
+
+interface Worker {
+  id: string;
+  username: string;
+  permissions: string[];
+  role: string;
+  baseSalary: number;
+  confirmationPrice: number;
+  upsellBonus: number;
+  stores: StoreInfo[];
+}
+
+export default function UsersPage() {
+  const { language } = useLanguage();
+  const t = useT();
+  const [workers, setWorkers] = useState<Worker[]>([]);
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [editingWorker, setEditingWorker] = useState<Worker | null>(null);
+  const [workerToDelete, setWorkerToDelete] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    username: "",
+    password: "",
+    permissions: ["read_orders"],
+    storeIds: [] as string[],
+    baseSalary: "0",
+    confirmationPrice: "0",
+    upsellBonus: "0",
+  });
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [allStores, setAllStores] = useState<StoreInfo[]>([]);
+
+  useEffect(() => {
+    fetch("/api/stores").then(r => r.ok && r.json()).then(data => {
+      if (Array.isArray(data)) setAllStores(data);
+    }).catch(() => {});
+  }, []);
+
+  const PERMISSION_LABELS: Record<string, string> = {
+    read_orders: t.usersPermReadOrders,
+    write_orders: t.usersPermManageOrders,
+    manage_products: t.usersPermManageProducts,
+    view_reports: t.usersPermViewReports,
+    access_all_stores: t.usersPermAccessAllStores,
+  };
+
+  const hasAllStoresAccess = formData.permissions.includes("access_all_stores");
+
+  const fetchWorkers = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/users");
+      if (res.ok) {
+        const data = await res.json();
+        setWorkers(data);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchWorkers();
+  }, []);
+
+  const handleOpenAdd = () => {
+    setEditingWorker(null);
+    setFormData({ 
+      username: "", 
+      password: "", 
+      permissions: ["read_orders"],
+      storeIds: [],
+      baseSalary: "0",
+      confirmationPrice: "0",
+      upsellBonus: "0"
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (worker: Worker) => {
+    setEditingWorker(worker);
+    setFormData({ 
+      username: worker.username, 
+      password: "", 
+      permissions: worker.permissions,
+      storeIds: worker.stores?.map(s => s.id) || [],
+      baseSalary: worker.baseSalary?.toString() || "0",
+      confirmationPrice: worker.confirmationPrice?.toString() || "0",
+      upsellBonus: worker.upsellBonus?.toString() || "0"
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    const method = editingWorker ? "PUT" : "POST";
+    const url = editingWorker ? `/api/users/${editingWorker.id}` : "/api/users";
+    
+    const res = await fetch(url, {
+      method,
+      body: JSON.stringify(formData),
+      headers: { "Content-Type": "application/json" }
+    });
+
+    if (res.ok) {
+      setIsModalOpen(false);
+      showToast("success", editingWorker ? t.productUpdated : t.productCreated);
+      fetchWorkers();
+    } else {
+      const data = await res.json();
+      showToast("error", data.error || t.usersSomethingWentWrong);
+    }
+    setIsLoading(false);
+  };
+
+  const handleDelete = async () => {
+    if (!workerToDelete) return;
+    setIsLoading(true);
+    const res = await fetch(`/api/users/${workerToDelete}`, { method: "DELETE" });
+    if (res.ok) {
+      setIsDeleteModalOpen(false);
+      setWorkerToDelete(null);
+      showToast("success", t.productDeleted);
+      fetchWorkers();
+    } else {
+      showToast("error", t.productFailedDelete);
+    }
+    setIsLoading(false);
+  };
+
+  const isRtl = language === "ar";
+
+  return (
+    <>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">{t.usersTitle}</h2>
+          <p className="text-slate-500">{t.usersDesc}</p>
+        </div>
+        <div className="flex flex-wrap gap-3 w-full md:w-auto">
+          {/* Refresh Button */}
+          <Button 
+            variant="secondary" 
+            onClick={fetchWorkers} 
+            className="p-2.5"
+            title={t.refresh}
+          >
+            <div className={`${isLoading ? "animate-spin" : ""}`}>
+              <RefreshCw size={18} />
+            </div>
+          </Button>
+
+          {/* View Mode Toggle */}
+          <div className="bg-white border border-slate-200 rounded-lg p-1 flex items-center shadow-sm">
+            <button 
+              onClick={() => setViewMode("list")}
+              className={`p-1.5 rounded-md transition-all ${viewMode === "list" ? "bg-slate-100 text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+            >
+              <ListIcon size={18} />
+            </button>
+            <button 
+              onClick={() => setViewMode("grid")}
+              className={`p-1.5 rounded-md transition-all ${viewMode === "grid" ? "bg-slate-100 text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+            >
+              <LayoutGrid size={18} />
+            </button>
+          </div>
+
+          <Button onClick={handleOpenAdd} className="gap-2">
+            <UserPlus size={18} />
+            <span>{t.addNew}</span>
+          </Button>
+        </div>
+      </div>
+
+      {viewMode === "list" ? (
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className={`w-full ${isRtl ? "text-right" : "text-left"}`}>
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="px-6 py-4 text-sm font-semibold text-slate-700">{t.worker}</th>
+                  <th className="px-6 py-4 text-sm font-semibold text-slate-700">{t.role}</th>
+                  <th className="px-6 py-4 text-sm font-semibold text-slate-700">{t.permissions}</th>
+                  <th className={`px-6 py-4 text-sm font-semibold text-slate-700 ${isRtl ? "text-right" : "text-left"}`}>{t.confirm}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {workers.map((worker) => (
+                  <tr key={worker.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 border border-slate-200">
+                          <UserIcon size={20} />
+                        </div>
+                        <div className="font-bold text-slate-900">{worker.username}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
+                        worker.role === "ADMIN" ? "bg-purple-50 text-purple-600 border-purple-100" : "bg-blue-50 text-blue-600 border-blue-100"
+                      }`}>
+                        <Shield size={12} />
+                        {worker.role === "ADMIN" ? t.admin : t.worker}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        {worker.permissions.map((p, i) => (
+                          <span key={i} className={`px-2 py-0.5 text-[10px] rounded border font-bold ${
+                            p === "access_all_stores" 
+                              ? "bg-indigo-50 text-indigo-600 border-indigo-100" 
+                              : "bg-slate-50 text-slate-600 border-slate-100"
+                          }`}>
+                            {PERMISSION_LABELS[p] || p}
+                          </span>
+                        ))}
+                      </div>
+                      {(worker.stores?.length || 0) > 0 && !worker.permissions.includes("access_all_stores") && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {worker.stores.map(s => (
+                            <span key={s.id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 text-[9px] rounded border border-blue-100 font-bold">
+                              <Store size={10} />
+                              {s.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {worker.permissions.includes("access_all_stores") && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[9px] rounded border border-indigo-100 font-bold">
+                            <Globe size={10} />
+                            {t.allStores}
+                          </span>
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className={`flex gap-1 ${isRtl ? "justify-end" : "justify-start"}`}>
+                        <button 
+                          onClick={() => handleOpenEdit(worker)}
+                          className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-lg transition-all"
+                          title={t.edit}
+                        >
+                          <Key size={18} />
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setWorkerToDelete(worker.id);
+                            setIsDeleteModalOpen(true);
+                          }}
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-white rounded-lg transition-all"
+                          title={t.delete}
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {workers.map((worker) => (
+            <div key={worker.id} className={`bg-white rounded-2xl border border-slate-200 p-5 hover:border-slate-300 transition-all shadow-sm group ${isRtl ? "text-right" : "text-left"}`}>
+              <div className={`flex justify-between items-start mb-4 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
+                <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-slate-100 transition-colors border border-slate-100">
+                  <UserIcon size={24} />
+                </div>
+                <button 
+                  onClick={() => {
+                    setWorkerToDelete(worker.id);
+                    setIsDeleteModalOpen(true);
+                  }}
+                  className="p-2 text-slate-300 hover:text-red-500 transition-colors"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+              
+              <div className="mb-4">
+                <h3 className="font-bold text-slate-900 text-lg mb-1">{worker.username}</h3>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                  worker.role === "ADMIN" ? "bg-purple-50 text-purple-600 border-purple-100" : "bg-blue-50 text-blue-600 border-blue-100"
+                }`}>
+                  <Shield size={10} />
+                  {worker.role === "ADMIN" ? t.admin : t.worker}
+                </span>
+              </div>
+
+              <div className="space-y-2 mb-6">
+                <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{t.permissions}</div>
+                <div className={`flex flex-wrap gap-1.5 ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
+                  {worker.permissions.map((p, i) => (
+                    <div key={i} className={`flex items-center gap-1 px-2 py-1 text-[10px] rounded-lg border font-bold ${
+                      p === "access_all_stores" 
+                        ? "bg-indigo-50 text-indigo-600 border-indigo-100" 
+                        : "bg-slate-50 text-slate-600 border-slate-100"
+                    }`}>
+                      <CheckCircle2 size={10} className={p === "access_all_stores" ? "text-indigo-500" : "text-emerald-500"} />
+                      {PERMISSION_LABELS[p] || p}
+                    </div>
+                  ))}
+                </div>
+                {worker.permissions.includes("access_all_stores") ? (
+                  <div className="flex items-center gap-1.5 px-2 py-1 bg-indigo-50 text-indigo-600 text-[10px] rounded-lg border border-indigo-100 font-bold">
+                    <Globe size={10} />
+                    {t.allStores}
+                  </div>
+                ) : (worker.stores?.length || 0) > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {worker.stores.map(s => (
+                      <span key={s.id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 text-[9px] rounded border border-blue-100 font-bold">
+                        <Store size={10} />
+                        {s.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <Button 
+                variant="secondary" 
+                onClick={() => handleOpenEdit(worker)}
+                className="w-full text-xs gap-2 py-2"
+              >
+                <Lock size={14} />
+                {t.usersChangePerms}
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {workers.length === 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 py-20 text-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-200">
+              <UserIcon size={32} />
+            </div>
+            <p className="text-slate-500 font-medium">{t.noData}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Modal */}
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        title={editingWorker ? t.edit : t.addNew}
+      >
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-4">
+            <Input
+              label={t.username}
+              placeholder={t.usersUsernamePlaceholder}
+              value={formData.username}
+              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+              required
+              disabled={!!editingWorker}
+            />
+            <Input
+              label={editingWorker ? t.usersNewPassword : t.password}
+              type="password"
+              placeholder="••••••••"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              minLength={8}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Input
+                label={t.usersBaseSalary}
+                type="number"
+                value={formData.baseSalary}
+                onChange={(e) => setFormData({ ...formData, baseSalary: e.target.value })}
+                placeholder="0"
+              />
+              <Input
+                label={t.usersConfirmationPrice}
+                type="number"
+                value={formData.confirmationPrice}
+                onChange={(e) => setFormData({ ...formData, confirmationPrice: e.target.value })}
+                placeholder="0"
+              />
+              <Input
+                label={t.usersUpsellBonus}
+                type="number"
+                value={formData.upsellBonus}
+                onChange={(e) => setFormData({ ...formData, upsellBonus: e.target.value })}
+                placeholder="0"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">{t.permissions}</label>
+              <div className="grid grid-cols-2 gap-3">
+                {Object.entries(PERMISSION_LABELS).map(([perm, label]) => (
+                  <label key={perm} className={`flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors ${isRtl ? "flex-row-reverse" : "flex-row"}`}>
+                    <input 
+                      type="checkbox"
+                      checked={formData.permissions.includes(perm)}
+                      onChange={(e) => {
+                        const newPerms = e.target.checked 
+                          ? [...formData.permissions, perm]
+                          : formData.permissions.filter(p => p !== perm);
+                        setFormData({ ...formData, permissions: newPerms });
+                      }}
+                      className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                    />
+                    <span className="text-xs font-bold text-slate-600">{label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Store Assignment */}
+            <div className="space-y-3 pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                  <Store size={16} />
+                  {t.usersAllowedStores}
+                </label>
+              </div>
+
+              <label className={`flex items-center gap-3 p-3 rounded-xl border transition-colors cursor-pointer ${hasAllStoresAccess ? "bg-indigo-50 border-indigo-200" : "border-slate-100 hover:bg-slate-50"}`}>
+                <input 
+                  type="checkbox"
+                  checked={hasAllStoresAccess}
+                  onChange={(e) => {
+                    const newPerms = e.target.checked 
+                      ? [...formData.permissions.filter(p => p !== "access_all_stores"), "access_all_stores"]
+                      : formData.permissions.filter(p => p !== "access_all_stores");
+                    setFormData({ ...formData, permissions: newPerms, storeIds: [] });
+                  }}
+                  className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
+                />
+                <div className="flex items-center gap-2">
+                  <Globe size={16} className="text-indigo-500" />
+                  <span className="text-xs font-bold text-slate-700">{PERMISSION_LABELS.access_all_stores}</span>
+                </div>
+              </label>
+
+              {!hasAllStoresAccess && (
+                <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pl-1">
+                  {allStores.map((store) => {
+                    const isSelected = formData.storeIds.includes(store.id);
+                    return (
+                      <label key={store.id} className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-colors ${isSelected ? "bg-slate-900 text-white border-slate-900" : "border-slate-100 hover:bg-slate-50 text-slate-700"}`}>
+                        <input 
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            const newStoreIds = e.target.checked 
+                              ? [...formData.storeIds, store.id]
+                              : formData.storeIds.filter(id => id !== store.id);
+                            setFormData({ ...formData, storeIds: newStoreIds });
+                          }}
+                          className="w-3.5 h-3.5 rounded border-slate-300 text-white focus:ring-white opacity-70"
+                        />
+                        <span className="text-xs font-bold truncate">{store.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+              {!hasAllStoresAccess && formData.storeIds.length > 0 && (
+                <p className="text-[10px] font-bold text-slate-400">
+                  {t.usersStoresSelected.replace("{count}", String(formData.storeIds.length))}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>{t.cancel}</Button>
+            <Button type="submit" isLoading={isLoading}>{editingWorker ? t.save : t.save}</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title={t.confirm}
+      >
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto">
+            <AlertCircle size={32} />
+          </div>
+          <p className="text-slate-600">{t.usersDeleteConfirm}</p>
+          <div className="flex justify-center gap-3 pt-4">
+            <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>{t.cancel}</Button>
+            <Button variant="danger" onClick={handleDelete} isLoading={isLoading}>{t.delete}</Button>
+          </div>
+        </div>
+      </Modal>
+    </>
+  );
+}

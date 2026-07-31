@@ -1,0 +1,88 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { comparePasswords, signToken } from "@/lib/auth";
+
+export async function POST(req: NextRequest) {
+  try {
+    const { username, password } = await req.json();
+
+    if (!username || !password) {
+      return NextResponse.json(
+        { error: "Username and password are required" },
+        { status: 400 }
+      );
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { username },
+      include: {
+        stores: {
+          select: { id: true, name: true }
+        }
+      }
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Invalid credentials" },
+        { status: 401 }
+      );
+    }
+
+    const isPasswordValid = await comparePasswords(password, user.password);
+
+    if (!isPasswordValid) {
+      return NextResponse.json(
+        { error: "Invalid credentials" },
+        { status: 401 }
+      );
+    }
+
+    // If user has "access_all_stores" permission, give them ALL stores
+    let storeIds = user.stores.map(s => s.id);
+    if (user.permissions?.includes("access_all_stores")) {
+      const allStores = await prisma.store.findMany({ select: { id: true } });
+      storeIds = allStores.map(s => s.id);
+      // Also update user.stores so the frontend knows about all stores
+      user.stores = allStores.map(s => ({ id: s.id, name: s.id })) as any;
+      // Re-fetch with names
+      const allStoresWithNames = await prisma.store.findMany({ select: { id: true, name: true } });
+      user.stores = allStoresWithNames;
+    }
+
+    const token = signToken({
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      permissions: user.permissions,
+      storeIds
+    });
+
+    const response = NextResponse.json({
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        permissions: user.permissions,
+        stores: user.stores
+      },
+    });
+
+    // Set cookie
+    response.cookies.set("auth_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: "/",
+    });
+
+    return response;
+  } catch (error) {
+    console.error("Login error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}

@@ -1,0 +1,109 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Button, Input, showToast } from "@/components/ui";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useLanguage, useT } from "@/lib/translations";
+import { Package } from "lucide-react";
+
+export default function LoginPage() {
+  const { language } = useLanguage();
+  const t = useT();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const router = useRouter();
+  const user = useAuthStore((state) => state.user);
+  const setUser = useAuthStore((state) => state.setUser);
+
+  useEffect(() => {
+    document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
+    document.documentElement.lang = language;
+  }, [language]);
+
+  // If user is already in the persisted store, redirect immediately
+  useEffect(() => {
+    if (user) {
+      router.push("/dashboard");
+    }
+  }, [user, router]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setUser(data.user);
+        showToast("success", t.loginSuccess);
+        router.push("/dashboard");
+      } else {
+        const errorMap: Record<string, string> = {
+          "Invalid credentials": t.invalidCredentials,
+          "Username and password are required": t.missingFields,
+        };
+        setError(errorMap[data.error] || t.loginError);
+      }
+    } catch (err) {
+      setError(t.genericError);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const isRtl = language === "ar";
+
+  return (
+    <div className={`min-h-screen flex items-center justify-center p-4 bg-slate-50 ${isRtl ? "font-cairo" : ""}`} dir={isRtl ? "rtl" : "ltr"}>
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl shadow-slate-200/50 p-8 border border-slate-100">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-slate-900/10">
+            <Package size={32} className="text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">{t.login}</h1>
+          <p className="text-slate-500 text-sm">{t.welcomeBack}</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-100 text-red-600 text-sm rounded-lg text-center">
+              {error}
+            </div>
+          )}
+
+          <Input
+            label={t.username}
+            placeholder={t.usernamePlaceholder}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+          />
+
+          <Input
+            label={t.password}
+            type="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+
+          <Button type="submit" className="w-full h-11" isLoading={isLoading}>
+            {t.login}
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+}
