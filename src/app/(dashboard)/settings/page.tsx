@@ -250,7 +250,7 @@ export default function SettingsPage() {
         ? Array.from({ length: 3 }, () => Math.random().toString(36).substring(2)).join("")
         : integrationForm.apiKey;
 
-      const body = { storeId: integrationForm.storeId, apiKey };
+      const body = { storeId: integrationForm.storeId, apiKey, websiteType: "blogger" };
       const url = editingIntegration
         ? `/api/settings/integrations/${editingIntegration.id}`
         : "/api/settings/integrations";
@@ -304,7 +304,7 @@ export default function SettingsPage() {
 
   const handleCopyEndpoint = async (uuid: string) => {
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/api/webhooks/woocommerce/${uuid}`);
+      await navigator.clipboard.writeText(`${window.location.origin}/api/orders/blogger`);
       setCopiedUuid(uuid);
       setTimeout(() => setCopiedUuid(null), 2000);
     } catch {}
@@ -784,7 +784,7 @@ export default function SettingsPage() {
                             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">{t.endpointUrl}</label>
                             <div className="flex items-center gap-2">
                               <code className="flex-1 block truncate bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-mono font-bold text-slate-700 shadow-sm">
-                                {`${typeof window !== "undefined" ? window.location.origin : ""}/api/webhooks/woocommerce/${integration.endpointUuid}`}
+                                {`${typeof window !== "undefined" ? window.location.origin : ""}/api/orders/blogger`}
                               </code>
                               <button
                                 onClick={() => handleCopyEndpoint(integration.endpointUuid)}
@@ -852,7 +852,7 @@ export default function SettingsPage() {
                         defaultValue="woocommerce"
                         className="w-full h-12 px-4 rounded-xl border border-slate-200 bg-white text-sm font-bold focus:outline-none focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900 transition-all"
                       >
-                        <option value="woocommerce">WooCommerce</option>
+                        <option value="blogger">Blogger (بلوجر)</option>
                         <option value="shopify" disabled>{t.settingsShopify}</option>
                         <option value="funnel" disabled>{t.settingsFunnel}</option>
                         <option value="other" disabled>{t.settingsOther}</option>

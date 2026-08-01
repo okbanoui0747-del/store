@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     const integration = await prisma.integration.create({
       data: {
         storeId,
-        websiteType: "woocommerce",
+        websiteType: "blogger",
         apiKey,
         endpointUuid: randomUUID(),
       },
